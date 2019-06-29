@@ -9,8 +9,10 @@
 /home/alexey/4 семестр/MRZVIS/lab_2/main.cpp
 iostream
 -
-cstdlib
+iomanip
 -
 ctime
+-
+math.h
 -
 

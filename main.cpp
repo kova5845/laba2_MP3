@@ -1,114 +1,288 @@
-// Лабораторная работа 2 по дисциплине МРЗвИС
-// Выполнена студентом группы 721701
-// БГУИР Коваленко Алексеем Васильевичем
-// Реализация модели решения задачи на ОКМД архитектуре
+//// Лабораторная работа 2 по дисциплине МРЗвИС
+//// Выполнена студентом группы 721701
+//// БГУИР Коваленко Алексеем Васильевичем
+//// Реализация модели решения задачи на ОКМД архитектуре
+//
+
 
 #include <iostream>
-#include <cstdlib>
+#include<iomanip>
 #include <ctime>
+#include <math.h>
 
 using namespace std;
 
-double a_to_b(double a, double b);
-double a_and_b(double a, double b);
-double f(double a, double b, double e);
-double d(double a, double b);
-double ** createArray(int n, int m);
-void random(double **a, int n, int m);
-void view(double **a, int n, int m);
+int m;
+int p;
+int q;
+int n;
+int r;
 
+double **A;
+double **B;
+double *E;
+double **G;
+double ***F;
+double ***D;
+double **C;
+
+int timeOfSumm=1;
+int timeOfDifference=1;
+int timeOfMultiplying=1;
+int timeOfCom=1;
+
+int callsOfSumm;
+int callsOfDifference;
+int callsOfMultiplying;
+int callsOfCom;
+
+
+int T1;
+int Tn;
+double Ky;
+double Eff;
+double Diff;
+int Lavg;
+
+double a_and_b(double** A, double** B, int k, int i, int j)
+{
+    double res = A[i][k] + B[k][j] - 1.;
+    if (res < 0) res = 0.;
+    callsOfCom++;
+    callsOfSumm++;
+    callsOfDifference++;
+    return res;
+}
+
+double a_to_b(double** A, double** B, int k, int j)
+{
+    double res;
+    if (B[k][j] >= 0) res = 0.;
+    else res = B[k][j];
+    callsOfCom++;
+    return res;
+
+}
+
+double b_to_a(double** A, double** B, int k, int i)
+{
+    double res;
+    if (A[i][k] >= 0) res = 0.;
+    else res = A[i][k];
+    callsOfCom++;
+    return res;
+}
+
+void Fijk(double **A, double **B, double *E, int i, int j, int k)
+{
+    callsOfMultiplying += 7;
+    callsOfDifference += 3;
+    callsOfSumm += 2;
+    F[i][j][k]= (a_to_b(A, B, k, j)*(2. * E[k] - 1.)*E[k] + b_to_a(A, B, k, i)*(1. + (4. * a_to_b(A, B, k, j) - 2.)*E[k])*(1. - E[k]));
+}
+
+void Dijk(double **A, double **B, int i, int j, int k)
+{
+    D[i][j][k]=a_and_b(A, B, k, i, j);
+}
+
+double f_func(int i, int j) {
+    double result = 1;
+    for (int k = 0; k < m; k++) {
+        result *= F[i][j][k];
+    }
+    callsOfMultiplying += m - 1;
+    return result;
+}
+
+double d_func(int i, int j) {
+    double result = 1;
+    for (int k = 0; k < m; k++) {
+        result *= 1 - D[i][j][k];
+    }
+    callsOfDifference += m + 1;
+    callsOfMultiplying += m - 1;
+    callsOfDifference++;
+    return 1 - result;
+}
+
+
+double f_and_d(int i, int j)
+{
+    return f_func(i, j) *d_func(i, j);
+}
+
+double cij(int i, int j) {
+    double c;
+    callsOfMultiplying += 8;
+    callsOfDifference += 3;
+    callsOfSumm += 2;
+    c= f_func(i,j)*(3. * G[i][j] - 2.)*G[i][j] + (d_func(i,j) + (4. * f_and_d(i, j) - 3. * d_func(i, j))*G[i][j])*(1. - G[i][j]);
+
+    return c;
+}
 
 int main() {
     srand(time(nullptr));
-    int p_size = 0, m_size = 0, q_size = 0;
-    double **a, **b, *e, **g, **c;
+    int i, j, k;
 
-    cout << "Input p, m, q";
-    cout << endl;
-    cin >> p_size >> m_size >> q_size;
-    a = createArray(p_size, m_size);
-    b = createArray(m_size, q_size);
-    g = createArray(p_size, q_size);
-    c = createArray(p_size, q_size);
-    e = new double [m_size];
-    random(a, p_size, m_size);
-    random(b, m_size, q_size);
-    random(g, p_size, q_size);
-    for (int i = 0; i < m_size; i++) {
-        e[i] = (double)rand()/(double) RAND_MAX*2 - 1;
+    cout << "Input m,p,q,n" << endl;
+    cin >> m >> p >> q >> n;
+
+    r = p * m * q;
+    Tn = 0;
+    callsOfSumm = 0;
+    callsOfDifference = 0;
+    callsOfMultiplying = 0;
+    callsOfCom = 0;
+
+    A = new double *[p];
+    B = new double *[m];
+    E = new double [m];
+    G = new double *[p];
+    C = new double *[p];
+    for (i = 0; i < p; i++) {
+        A[i] = new double[m];
+        G[i] = new double[q];
+        C[i] = new double[q];
+    }
+    for (i = 0; i < m; i++) {
+        B[i] = new double[q];
     }
 
-    for (int i = 0; i < p_size; i++) {
-        for (int j = 0; j < q_size; j++) {
-            double f1 = 1, d1 = 1;
-            for(int k = 0; k  < m_size; k++){
-                f1 *= f(a[i][k], b[k][j], e[k]);
-                d1 *= 1 - d(a[i][k], b[k][j]);
-            }
-            d1 = 1 - d1;
-            c[i][j] = f1*(3*g[i][j] - 2)*g[i][j] + (d1 + (4*a_and_b(f1, d1) - 3*d1)*g[i][j])*(1 - g[i][j]);
+
+    for (i = 0; i < p; i++) {
+        for (j = 0; j < m; j++) {
+            A[i][j] = (double)(rand() % 20001) / 10000 - 1;
         }
     }
-    cout << endl;
-    view(a, p_size, m_size);
-    view(b, m_size, q_size);
-    view(g, p_size, q_size);
-    for (int i = 0; i < m_size; i++) {
-        cout << e[i] << " ";
+    for (i = 0; i < m; i++) {
+        for (j = 0; j < q; j++) {
+            B[i][j] = (double)(rand() % 20001) / 10000 - 1;
+        }
     }
-    cout << endl;
-    cout << endl;
-    view(c, p_size, q_size);
-    for (int i = 0; i < p_size; i++) {
-        delete[] a[i];
-        delete[] g[i];
-        delete[] c[i];
+    for (i = 0; i < m; i++) {
+        E[i] = (double)(rand() % 20001) / 10000 - 1;
     }
-    for (int i = 0; i < m_size; i++) {
-        delete[] b[i];
+    for (i = 0; i < p; i++) {
+        for (j = 0; j < q; j++) {
+            G[i][j] = (double)(rand() % 20001) / 10000 - 1;
+        }
     }
-    delete[] e;
+
+
+    F = new double **[p];
+    for (i = 0; i < p; i++)
+        F[i] = new double* [q];
+    for (i = 0; i < p; i++)
+        for (j = 0; j < q; j++)
+            F[i][j] = new double[m];
+
+    D = new double **[p];
+    for (i = 0; i < p; i++)
+        D[i] = new double*[q];
+    for (i = 0; i < p; i++)
+        for (j = 0; j < q; j++)
+            D[i][j] = new double[m];
+
+    cout << "A:";
+    for (i = 0; i < p; i++) {
+        cout << endl;
+        for (j = 0; j < m; j++) {
+            cout << setw(7) << A[i][j] << " ";
+        }
+    }
+    cout << endl << endl;
+    cout << "B:";
+    for (i = 0; i < m; i++) {
+        cout << endl;
+        for (j = 0; j < q; j++) {
+            cout << setw(7) << B[i][j] << " ";
+        }
+    }
+    cout << endl << endl;
+    cout << "E:";
+    cout << endl;
+    for (i = 0; i < m; i++) {
+        cout << setw(7) << E[i] << " ";
+    }
+    cout << endl << endl;
+    cout << "G:";
+    for (i = 0; i < p; i++) {
+        cout << endl;
+        for (j = 0; j < q; j++) {
+            cout << setw(7) << G[i][j] << " ";
+        }
+    }
+    for (i = 0; i < p; i++)
+        for (j = 0; j < q; j++)
+            for (k = 0; k < m; k++)
+                Fijk(A, B, E, i, j, k);
+    int reductionTime = 3 * (timeOfMultiplying + timeOfDifference + timeOfSumm);
+    int operationTime = 7 * timeOfMultiplying + 3 * timeOfDifference + 2 * timeOfSumm;
+    Tn += (int)(reductionTime + operationTime) * (int)ceil((double)r / n);
+
+    for (i = 0; i < p; i++)
+        for (j = 0; j < q; j++)
+            for (k = 0; k < m; k++)
+                Dijk(A, B, i, j, k);
+
+    Tn += timeOfMultiplying * (int)ceil((double) r / n);
+
+    for (i = 0; i < p; i++) {
+        for (j = 0; j < q; j++) {
+            C[i][j] = cij(i,j);
+        }
+    }
+    int FTime = 2 * timeOfMultiplying * (m - 1);
+    int DTime = 3 * (timeOfDifference * (m + 1) + timeOfMultiplying * (m - 1));
+    operationTime = 8 * timeOfMultiplying + 4 * timeOfDifference + 2 * timeOfSumm;
+    Tn += (FTime + DTime + operationTime) * (int)ceil((double)(p * q) / (double)n);
+
+    cout << endl << endl;
+    cout << "C:";
+
+    for (i = 0; i < p; i++) {
+        cout << endl;
+        for (j = 0; j < q; j++) {
+            cout << setw(12) << C[i][j] << " ";
+        }
+    }
+    cout << endl << endl;
+
+    cout << "Paramerts:" << endl;
+    T1 = timeOfSumm * callsOfSumm + timeOfDifference * callsOfDifference + timeOfMultiplying * callsOfMultiplying + timeOfCom * callsOfCom;
+    if (Tn > T1) Tn = T1;
+    Ky = (double)T1 / Tn;
+    Eff = (double)Ky / n;
+    //D
+    Lavg = timeOfMultiplying * r;
+    //F
+    Lavg += (7 * timeOfMultiplying + 3 * timeOfDifference + 2 * timeOfSumm) * r;
+    //C
+    Lavg += (8 * timeOfMultiplying + 3 * timeOfDifference + 2 * timeOfSumm) * p * q;
+    //a_or_b
+    Lavg += (timeOfCom + timeOfSumm + timeOfDifference) * (m - 1) * 2 * p * q;
+    //D_func
+    Lavg += (timeOfMultiplying * (m - 1) + timeOfDifference * (m + 1)) * 3 * p * q;
+    //a_to_b
+    Lavg += (timeOfCom) * r * 3;
+    Lavg = ceil(Lavg / r);
+    Diff = (double)Tn / Lavg;
+
+    cout << "T1= " << T1 << "\nTn= " << Tn << "\nKy= " << Ky << "\ne= " << Eff << "\nLsum= " << Tn << "\nLavg= " << Lavg << "\nD= " << Diff << endl;
+
+    for (i = 0; i < p; i++)
+    {
+        delete[]A[i];
+        delete[]G[i];
+        delete[]C[i];
+    }
+    delete[]A;
+    delete[]B;
+    delete[]C;
+    delete[]E;
+    delete[]G;
     return 0;
 }
 
-void view(double **a, int n, int m){
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < m; j++) {
-            cout << a[i][j] << " ";
-        }
-        cout << endl;
-    }
-    cout << endl;
-}
-
-void random(double **a, int n, int m){
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < m; j++) {
-            a[i][j] = (double)rand()/(double) RAND_MAX*2 - 1;
-        }
-    }
-}
-
-double ** createArray(int n, int m){
-    double **a = new double*[n];
-    for(int i = 0; i < n; i++){
-        a[i] = new double[m];
-    }
-    return a;
-}
-
-double a_to_b(double a, double b){
-    return (a + b - 1 > 1) ? 1 : a + b - 1;
-}
-
-double a_and_b(double a, double b){
-    return (a + b - 1 > 0) ? a + b - 1  : 0;
-}
-
-double f(double a, double b, double e){
-    return a_to_b(a, b)*(2*e - 1)*e + a_to_b(a, b)*(1 + 4*e*a_to_b(a, b))*(1 - e);
-}
-
-double d(double a, double b){
-    return a_and_b(a, b);
-}
